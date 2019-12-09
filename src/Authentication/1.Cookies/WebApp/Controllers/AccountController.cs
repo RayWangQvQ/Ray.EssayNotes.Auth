@@ -11,7 +11,7 @@ namespace WebApp.Controllers
     public class AccountController : Controller
     {
         /// <summary>
-        /// 登录
+        /// 访问登录页面
         /// </summary>
         /// <param name="returnUrl"></param>
         /// <returns></returns>
@@ -23,7 +23,7 @@ namespace WebApp.Controllers
         }
 
         /// <summary>
-        /// 异步登录
+        /// 异步登录并跳转
         /// </summary>
         /// <param name="userName"></param>
         /// <param name="password"></param>
@@ -34,31 +34,37 @@ namespace WebApp.Controllers
         {
             ViewData["ReturnUrl"] = returnUrl;
 
-            // Normally Identity handles sign in, but you can do it directly
-            if (ValidateLogin(userName, password))
+            // 通常是Identity处理登录验证, 但是我们也可以自己处理
+            if (!ValidateLogin(userName, password)) return View();
+
+            //生成Claim断言集合
+            var claims = new List<Claim>
             {
-                var claims = new List<Claim>
-                {
-                    new Claim("user", userName),
-                    new Claim("role", "Member")
-                };
+                new Claim("user", userName),
+                new Claim("role", "Member")
+            };
+            //生成Identity身份
+            var claimsIdentity = new ClaimsIdentity(claims, "Cookies", "user", "role");
+            //生成Principal持有人
+            var claimsPrincipal = new ClaimsPrincipal(claimsIdentity);
 
-                await HttpContext.SignInAsync(new ClaimsPrincipal(new ClaimsIdentity(claims, "Cookies", "user", "role")));
+            await HttpContext.SignInAsync(claimsPrincipal);
 
-                if (Url.IsLocalUrl(returnUrl))
-                {
-                    return Redirect(returnUrl);
-                }
-                else
-                {
-                    return Redirect("/");
-                }
+            if (Url.IsLocalUrl(returnUrl))
+            {
+                return Redirect(returnUrl);
             }
-
-            return View();
+            else
+            {
+                return Redirect("/");
+            }
         }
 
-
+        /// <summary>
+        /// 拒绝访问跳转
+        /// </summary>
+        /// <param name="returnUrl"></param>
+        /// <returns></returns>
         public IActionResult AccessDenied(string returnUrl = null)
         {
             return View();
